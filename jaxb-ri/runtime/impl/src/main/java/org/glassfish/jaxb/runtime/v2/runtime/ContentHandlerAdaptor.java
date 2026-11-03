@@ -54,15 +54,6 @@ final class ContentHandlerAdaptor extends DefaultHandler {
         prefixMap.add(uri);
     }
 
-    private boolean containsPrefixMapping(String prefix, String uri) {
-        for( int i=0; i<prefixMap.size(); i+=2 ) {
-            if(prefixMap.get(i).equals(prefix)
-            && prefixMap.get(i+1).equals(uri))
-                return true;
-        }
-        return false;
-    }
-
     @Override
     public void startElement(String namespaceURI, String localName, String qName, Attributes atts)
         throws SAXException {
@@ -71,13 +62,10 @@ final class ContentHandlerAdaptor extends DefaultHandler {
 
             int len = atts.getLength();
 
-            String p = getPrefix(qName);
-
-            // is this prefix going to be declared on this element?
-            if(containsPrefixMapping(p,namespaceURI))
-                serializer.startElementForce(namespaceURI,localName,p,null);
-            else
-                serializer.startElement(namespaceURI,localName, p,null);
+            // Preserve the DOM element's prefix, including the empty prefix.
+            // In particular, clearing the default namespace must not reallocate
+            // the parent's namespace to an unused generated prefix.
+            serializer.startElementForce(namespaceURI,localName,getPrefix(qName),null);
 
             // declare namespace events
             for (int i = 0; i < prefixMap.size(); i += 2) {
