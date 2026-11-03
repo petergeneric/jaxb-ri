@@ -62,6 +62,10 @@ public class DomNamespaceTest {
     private static final String QUALIFIED_ELEMENT_SAMPLE = "<x xmlns:p=\"urn:foo\" p:key=\"value\">"
             + "<p:y/><z xmlns=\"urn:foo\"/></x>";
 
+    private static final String REBOUND_PREFIX_ELEMENT_SAMPLE = "<q:x xmlns:q=\"urn:bar\" xmlns:p=\"urn:foo\">"
+            + "<r:y xmlns:r=\"urn:foo\"><r:z xmlns:r=\"urn:bar\">"
+            + "<x p:key=\"value\"/></r:z></r:y></q:x>";
+
     private static JAXBContext context;
 
     @BeforeAll
@@ -113,6 +117,16 @@ public class DomNamespaceTest {
         assertEquals(NAMESPACE, child.getFirstChild().getNamespaceURI());
         assertEquals("p:y", child.getFirstChild().getNodeName());
         assertEquals(NAMESPACE, child.getLastChild().getNamespaceURI());
+    }
+
+    @Test
+    public void shouldPreserveDomAttributeNamespaceWhenAncestorPrefixIsRebound() throws Exception {
+        Root root = createRoot(REBOUND_PREFIX_ELEMENT_SAMPLE);
+
+        String actual = serializeObject(root);
+        Element child = (Element) parse(actual).getElementsByTagName("x").item(0);
+
+        assertEquals("value", child.getAttributeNS(NAMESPACE, "key"));
     }
 
     @Test
