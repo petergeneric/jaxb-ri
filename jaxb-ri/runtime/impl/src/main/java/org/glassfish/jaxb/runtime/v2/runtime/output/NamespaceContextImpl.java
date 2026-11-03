@@ -185,7 +185,7 @@ public final class NamespaceContextImpl implements NamespaceContext2 {
             // check for the existing binding
             for( int i=size-1; i>=0; i-- ) {
                 String p = prefixes[i];
-                if(nsUris[i].equals(uri)) {
+                if(nsUris[i].equals(uri) && isPrefixInScope(i)) {
                     if (!requirePrefix || !p.isEmpty())
                         return i;
                     // declared but this URI is bound to empty. Look further
@@ -280,10 +280,23 @@ public final class NamespaceContextImpl implements NamespaceContext2 {
      */
     public int getPrefixIndex( String uri ) {
         for( int i=size-1; i>=0; i-- ) {
-                if(nsUris[i].equals(uri))
-                    return i;
+            if(nsUris[i].equals(uri) && isPrefixInScope(i))
+                return i;
         }
         throw new IllegalStateException();
+    }
+
+    /**
+     * Checks whether a binding has been shadowed by a later declaration.
+     * Older bindings remain in the arrays so they can be restored when an
+     * element's namespace context is popped.
+     */
+    private boolean isPrefixInScope(int index) {
+        for (int i = size - 1; i > index; i--) {
+            if (prefixes[i].equals(prefixes[index]))
+                return false;
+        }
+        return true;
     }
 
     /**
@@ -323,7 +336,7 @@ public final class NamespaceContextImpl implements NamespaceContext2 {
             return declareNamespace(uri,null,false);
         } else {
             for( int i=size-1; i>=0; i-- )
-                if(nsUris[i].equals(uri))
+                if(nsUris[i].equals(uri) && isPrefixInScope(i))
                     return prefixes[i];
             return null;
         }
@@ -356,7 +369,11 @@ public final class NamespaceContextImpl implements NamespaceContext2 {
      * This model of namespace declarations maintain the following invariants.
      *
      * <ul>
-     *  <li>If a non-empty prefix is declared, it will never be reassigned to different namespace URIs.</li>
+     *  <li>If a non-empty prefix is declared, it will never be reassigned to a different namespace URI
+     *      by {@link NamespaceContextImpl#declareNsUri(String, String, boolean)}.</li>
+     *  <li>Forced declarations through {@link NamespaceContextImpl#force(String, String)} may shadow
+     *      ancestor bindings to preserve DOM namespaces. URI lookups must ignore shadowed bindings;
+     *      popping this context restores the ancestor bindings.</li>
      * </ul>
      */
     public static final class Element {
